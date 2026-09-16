@@ -91,3 +91,7 @@ export PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" \
 
 echo $PUBLIC_IP
 ```
+
+```sh
+ssh -i ./"$MY_KEY_NAME".pem -o StrictHostKeyChecking=accept-new ubuntu@"$PUBLIC_IP"
+```
