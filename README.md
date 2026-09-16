@@ -217,3 +217,45 @@ curl -i -s "$PRESIGNED_URL"
 # 3. 대조: 서명 없이 같은 객체를 직접 호출하면 차단됩니다
 curl -i -s "https://${MY_BUCKET}.s3.${AWS_REGION}.amazonaws.com/hello.txt" | head -1
 ```
+
+### step6
+
+```sh
+# AWS RDS (RDBMS) MySQL
+aws rds wait db-instance-available --db-instance-identifier "$MY_DB_ID"
+```
+
+```sh
+export RDS_ENDPOINT=$(aws rds describe-db-instances \
+  --db-instance-identifier "$MY_DB_ID" \
+  --query "DBInstances[0].Endpoint.Address" --output text)
+
+export RDS_PORT=$(aws rds describe-db-instances \
+  --db-instance-identifier "$MY_DB_ID" \
+  --query "DBInstances[0].Endpoint.Port" --output text)
+
+echo "확정된 RDS 엔드포인트:$RDS_ENDPOINT:$RDS_PORT"
+```
+
+```sh
+echo "ElastiCache Redis 상태 폴링 시작..."
+while [ "$(aws elasticache describe-cache-clusters \
+  --cache-cluster-id "$MY_CACHE_ID" \
+  --query "CacheClusters[0].CacheClusterStatus" --output text)" != "available" ]; do
+  echo "현재 상태 대기 중... (15초 대기)"
+  sleep 15
+done
+echo "ElastiCache Redis 프로비저닝 완료"
+```
+
+```sh
+export REDIS_ENDPOINT=$(aws elasticache describe-cache-clusters \
+  --cache-cluster-id "$MY_CACHE_ID" --show-cache-node-info \
+  --query "CacheClusters[0].CacheNodes[0].Endpoint.Address" --output text)
+
+export REDIS_PORT=$(aws elasticache describe-cache-clusters \
+  --cache-cluster-id "$MY_CACHE_ID" --show-cache-node-info \
+  --query "CacheClusters[0].CacheNodes[0].Endpoint.Port" --output text)
+
+echo "확정된 ElastiCache 엔드포인트:$REDIS_ENDPOINT:$REDIS_PORT"
+```
