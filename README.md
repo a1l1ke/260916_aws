@@ -357,3 +357,7 @@ redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
 redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
   del "${STUDENT_ID}:ec2"
 ```
+
+### step9 RDS + IntelliJ
+
+### step10 ElastiCache + IntelliJ
