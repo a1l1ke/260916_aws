@@ -147,7 +147,7 @@ aws elasticache create-cache-subnet-group \
   --subnet-ids "${SUBNET_IDS[@]}"
 ```
 
-### step4
+### step4 RDS & ElastiCache 인스턴스 생성
 ```sh
 export MY_DB_PASSWORD=qwer1234!
 echo $MY_DB_PASSWORD
@@ -180,4 +180,40 @@ aws elasticache create-cache-cluster \
   --cache-subnet-group-name "$MY_CACHE_SUBNET_GROUP" \
   --security-group-ids "$MY_DATA_SG_ID" \
   --tags Key=Name,Value="$MY_CACHE_ID" Key=Course,Value=infra-training Key=Owner,Value="$STUDENT_ID"
+```
+
+### step5 S3
+
+```sh
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export MY_BUCKET="${STUDENT_ID}-app-assets-${ACCOUNT_ID}"
+echo "S3 버킷 이름:$MY_BUCKET"
+```
+
+```sh
+aws s3 mb "s3://$MY_BUCKET" --region "$AWS_REGION"
+aws s3api put-bucket-tagging \
+  --bucket "$MY_BUCKET" \
+  --tagging "TagSet=[{Key=Name,Value=$MY_BUCKET},{Key=Course,Value=infra-training},{Key=Owner,Value=$STUDENT_ID}]"
+```
+
+- https://948806325749-ticmxh4e.ap-northeast-2.console.aws.amazon.com/s3/home?region=ap-northeast-2#
+
+```sh
+touch hello.txt
+echo "Hello World" >> hello.txt
+aws s3 cp hello.txt "s3://$MY_BUCKET/hello.txt"
+aws s3 ls "s3://$MY_BUCKET/"
+```
+
+```sh
+# 1. 300초(5분) 만료 Presigned URL 발급
+export PRESIGNED_URL=$(aws s3 presign "s3://$MY_BUCKET/hello.txt" --expires-in 300)
+echo "발급된 Presigned URL:$PRESIGNED_URL"
+
+# 2. curl로 임시 서명 URL 다운로드 확인
+curl -i -s "$PRESIGNED_URL"
+
+# 3. 대조: 서명 없이 같은 객체를 직접 호출하면 차단됩니다
+curl -i -s "https://${MY_BUCKET}.s3.${AWS_REGION}.amazonaws.com/hello.txt" | head -1
 ```
