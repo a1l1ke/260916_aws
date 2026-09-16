@@ -218,7 +218,7 @@ curl -i -s "$PRESIGNED_URL"
 curl -i -s "https://${MY_BUCKET}.s3.${AWS_REGION}.amazonaws.com/hello.txt" | head -1
 ```
 
-### step6
+### step6 RDS / ElastiCache 생성 확인
 
 ```sh
 # AWS RDS (RDBMS) MySQL
@@ -258,4 +258,102 @@ export REDIS_PORT=$(aws elasticache describe-cache-clusters \
   --query "CacheClusters[0].CacheNodes[0].Endpoint.Port" --output text)
 
 echo "확정된 ElastiCache 엔드포인트:$REDIS_ENDPOINT:$REDIS_PORT"
+```
+
+### step7 compose + RDS
+
+```sh
+ssh -i ./"$MY_KEY_NAME".pem -o StrictHostKeyChecking=accept-new ubuntu@"$PUBLIC_IP"
+```
+
+```dotenv
+# .env.rds
+DB_NAME=appdb
+DB_USER=admin
+DB_PASSWORD=$MY_DB_PASSWORD
+RDS_ENDPOINT=$RDS_ENDPOINT
+APP_MESSAGE=Live on AWS EC2 Node 1 via Compose + RDS!
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT=30000
+```
+
+- https://948806325749-ticmxh4e.ap-northeast-2.console.aws.amazon.com/rds/home?region=ap-northeast-2#databases:
+- mysql -> 3306 ... 주소를 받아와서 $RDS_ENPOINT
+- $MY_DB_PASSWORD -> 위에 입력했던 것
+
+```yaml
+# compose.yml
+name: aws-managed
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - frontend-net
+
+  app:
+    image: ghcr.io/a1l1ke/simple-back-ghcr:latest
+    container_name: spring-app
+    restart: on-failure
+    env_file:
+      - .env.rds
+    environment:
+      PORT: 8080
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${RDS_ENDPOINT}:3306/${DB_NAME}?createDatabaseIfNotExist=true"
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - frontend-net
+
+networks:
+  frontend-net:
+```
+
+```sh
+# 리눅스 내부에서
+# rm compose.yml
+vi compose.yml
+```
+
+# step8 ElasticCache
+
+- https://948806325749-ticmxh4e.ap-northeast-2.console.aws.amazon.com/elasticache/home?region=ap-northeast-2#/redis
+```sh
+export REDIS_ENDPOINT=student**-redis.******.0001.apn2.cache.amazonaws.com
+export STUDENT_ID=student**
+export REDIS_PORT=6379
+echo ${REDIS_ENDPOINT} ${REDIS_PORT} ${STUDENT_ID}
+```
+
+```sh
+set -e
+sudo apt-get update -y
+sudo apt-get install -y redis-tools
+```
+
+```sh
+redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" ping
+redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
+  set "${STUDENT_ID}:ec2" "connected-from-ec2"
+redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
+  get "${STUDENT_ID}:ec2"
+redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
+  del "${STUDENT_ID}:ec2"
 ```
