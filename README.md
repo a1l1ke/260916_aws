@@ -1,4 +1,4 @@
-- step0 환경변수 세팅 및 로그인
+### step0 환경변수 세팅 및 로그인
 ```sh
 export STUDENT_ID="studentXX" # 이것 꼭 수정해주세요
 # export STUDENT_ID="student00"
@@ -39,7 +39,7 @@ export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo $ACCOUNT_ID
 ```
 
-- step1 aws 기본 세팅
+### step1 aws 기본 세팅
 ```sh
 # 기존 키 삭제 및 신규 발급
 aws ec2 delete-key-pair --key-name "$MY_KEY_NAME"
@@ -94,4 +94,25 @@ echo $PUBLIC_IP
 
 ```sh
 ssh -i ./"$MY_KEY_NAME".pem -o StrictHostKeyChecking=accept-new ubuntu@"$PUBLIC_IP"
+```
+
+### step2 도커 구동
+
+```sh
+# 인스턴스 내부에서
+
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+sudo systemctl is-active docker
+sudo docker --version
+sudo docker compose version
+```
+
+```sh
+# 도커 이미지 확보
+sudo docker pull nginx:alpine
+export MY_APP_IMAGE="ghcr.io/a1l1ke/simple-back-ghcr:latest"
+sudo docker pull "$MY_APP_IMAGE"
+sudo docker images
 ```
