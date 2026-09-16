@@ -116,3 +116,68 @@ export MY_APP_IMAGE="ghcr.io/a1l1ke/simple-back-ghcr:latest"
 sudo docker pull "$MY_APP_IMAGE"
 sudo docker images
 ```
+
+### step3 RDS / ElastiCache 보안 규칙 및 서브넷 그룹 생성
+```sh
+export MY_DATA_SG_ID=$(aws ec2 create-security-group \
+    --group-name "$MY_DATA_SG_NAME" \
+    --description "RDS and ElastiCache access from EC2 SG" --vpc-id "$VPC_ID" \
+    --tag-specifications "ResourceType=security-group,Tags=[{Key=Name,Value=$MY_DATA_SG_NAME},{Key=Course,Value=infra-training},{Key=Owner,Value=$STUDENT_ID}]" \
+    --query "GroupId" --output text)
+aws ec2 authorize-security-group-ingress \
+    --group-id "$MY_DATA_SG_ID" --protocol tcp --port 3306 --source-group "$MY_SG_ID"
+aws ec2 authorize-security-group-ingress \
+    --group-id "$MY_DATA_SG_ID" --protocol tcp --port 6379 --source-group "$MY_SG_ID"
+```
+
+```sh
+# 서브넷
+export SUBNET_IDS=($(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "Subnets[].SubnetId" --output text))
+echo $SUBNET_IDS
+
+aws rds create-db-subnet-group \
+  --db-subnet-group-name "$MY_DB_SUBNET_GROUP" \
+  --db-subnet-group-description "Default VPC subnets for RDS" \
+  --subnet-ids "${SUBNET_IDS[@]}"
+
+aws elasticache create-cache-subnet-group \
+  --cache-subnet-group-name "$MY_CACHE_SUBNET_GROUP" \
+  --cache-subnet-group-description "Default VPC subnets for ElastiCache" \
+  --subnet-ids "${SUBNET_IDS[@]}"
+```
+
+### step4
+```sh
+export MY_DB_PASSWORD=qwer1234!
+echo $MY_DB_PASSWORD
+```
+
+```sh
+aws rds create-db-instance \
+  --db-instance-identifier "$MY_DB_ID" \
+  --db-instance-class db.t4g.micro \
+  --engine mysql \
+  --master-username admin \
+  --master-user-password "$MY_DB_PASSWORD" \
+  --allocated-storage 20 \
+  --storage-type gp3 \
+  --vpc-security-group-ids "$MY_DATA_SG_ID" \
+  --db-subnet-group-name "$MY_DB_SUBNET_GROUP" \
+  --no-multi-az \
+  --no-publicly-accessible \
+  --backup-retention-period 0 \
+  --tags Key=Name,Value="$MY_DB_ID" Key=Course,Value=infra-training Key=Owner,Value="$STUDENT_ID"
+```
+- https://948806325749-ticmxh4e.ap-northeast-2.console.aws.amazon.com/rds/home?region=ap-northeast-2#databases:
+- https://aws.amazon.com/ko/ec2/instance-types/t4/
+```sh
+aws elasticache create-cache-cluster \
+  --cache-cluster-id "$MY_CACHE_ID" \
+  --cache-node-type cache.t4g.micro \
+  --engine redis \
+  --num-cache-nodes 1 \
+  --cache-subnet-group-name "$MY_CACHE_SUBNET_GROUP" \
+  --security-group-ids "$MY_DATA_SG_ID" \
+  --tags Key=Name,Value="$MY_CACHE_ID" Key=Course,Value=infra-training Key=Owner,Value="$STUDENT_ID"
+```
