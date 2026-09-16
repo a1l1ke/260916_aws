@@ -361,3 +361,7 @@ redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
 ### step9 RDS + IntelliJ
 
 ### step10 ElastiCache + IntelliJ
+
+### step11 복제 인스턴스
+
+### step12 ELB - ALB
