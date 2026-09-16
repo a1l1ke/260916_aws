@@ -359,8 +359,30 @@ redis-cli -h "$REDIS_ENDPOINT" -p "$REDIS_PORT" \
 ```
 
 ### step9 RDS + IntelliJ
+```sh
+echo $PUBLIC_IP
+# 13.209.21.132 - 각자 다름
+echo $RDS_ENDPOINT
+# student00-mysql-db.cx2g4k2i6q7n.ap-northeast-2.rds.amazonaws.com
+```
+
+```sql
+-- 현재 접속 데이터베이스 확인
+SELECT DATABASE();
+
+-- 스프링부트 JPA가 자동 생성한 테이블 목록 조회
+SHOW TABLES;
+
+-- 사용자 테이블 데이터 조회
+SELECT * FROM users;
+```
 
 ### step10 ElastiCache + IntelliJ
+```sh
+SET student01:intellij "connected-via-ssh-tunnel"
+GET student01:intellij
+DEL student01:intellij
+```
 
 ### step11 복제 인스턴스
 
